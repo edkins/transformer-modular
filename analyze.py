@@ -23,7 +23,7 @@ def calc_attn(model, x):
 
 def final_model():
     with os.scandir('models') as entries:
-        filename = max(entry.path for entry in entries)
+        filename = max(entry.path for entry in entries if entry.is_file())
         state_dict = torch.load(filename, map_location=device)
         model = SingleLayerTransformer().to(device)
         model.load_state_dict(state_dict)
@@ -94,8 +94,8 @@ def final_attn_fft():
         fig, ax = plt.subplots(4, 3)
         for i in range(4):
             for j in range(3):
-                fft = np.fft.fft2(A[:,:,i,j].cpu().numpy())
-                ax[i,j].imshow(np.abs(fft), vmax=1)
+                fft = np.fft.fft2(A[:,:,i,j].cpu().numpy())[1:,1:]
+                ax[i,j].imshow(np.abs(fft))
         plt.show()
 
 def final_logits():

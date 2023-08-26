@@ -1,5 +1,4 @@
 /env/
 /models/
-/models.2/
-/models.10/
+/models.*/
 __pycache__/

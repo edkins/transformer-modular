@@ -47,8 +47,10 @@ elif sys.argv[1:] == ['train']:
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=weight_decay)
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
 
-    train_losses = np.zeros(n_epochs)
-    test_losses = np.zeros(n_epochs)
+    train_losses = np.zeros(n_epochs // save_every)
+    test_losses = np.zeros(n_epochs // save_every)
+    sum_train_losses = 0
+    sum_test_losses = 0
 
     start_time = time.monotonic()
 
@@ -66,26 +68,31 @@ elif sys.argv[1:] == ['train']:
                 loss_sum += loss.detach().sum()
                 loss.backward()
                 optimizer.step()
-
+            sum_train_losses += loss_sum.item() / n_train
 
             model.eval()
             with torch.no_grad():
                 test_logits = model(test_data[:,:3])
-                test_loss = loss_fn(test_logits, test_data[:,-1])
-                train_losses[epoch] = loss_sum.item() / n_train
-                test_losses[epoch] = test_loss.item() / n_test
+                test_loss = loss_fn(test_logits, test_data[:,-1]).item()
+                sum_test_losses += test_loss / n_test
 
-            if epoch % save_every == 0:
+            if epoch % save_every == save_every - 1:
+                avg_train_loss = sum_train_losses / save_every
+                avg_test_loss = sum_test_losses / save_every
+                train_losses[epoch // save_every] = avg_train_loss
+                test_losses[epoch // save_every] = avg_test_loss
                 filename = f'models/model_{epoch:05d}.pt'
                 torch.save(model.state_dict(), filename)
                 timing = time.monotonic() - start_time
-                print(f'epoch: {epoch:5d}   train loss: {loss_sum.item() / n_train:12.4f}   test loss: {test_loss.item() / n_test:12.4f}')
-                print(f'{timing:8.2f}: saved model {filename}')
+                print(f'{timing:8.2f}: epoch: {epoch:5d}   train loss: {avg_train_loss:12.4f}   test loss: {avg_test_loss:12.4f}')
+                sum_train_losses = 0
+                sum_test_losses = 0
+
     except KeyboardInterrupt:
         pass
 
-    plt.semilogy(train_losses[:epoch], label='train loss')
-    plt.semilogy(test_losses[:epoch], label='test loss')
+    plt.semilogy(train_losses[:epoch//save_every], label='train loss')
+    plt.semilogy(test_losses[:epoch//save_every], label='test loss')
     plt.legend()
     plt.show()
 else:
