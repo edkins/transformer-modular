@@ -19,6 +19,12 @@ os.makedirs('models', exist_ok=True)
 
 if sys.argv[1:] == ['final','embed']:
     analyze.final_embed()
+elif sys.argv[1:] == ['final','embed_fft']:
+    analyze.final_embed_fft()
+elif sys.argv[1:] == ['final','attn']:
+    analyze.final_attn()
+elif sys.argv[1:] == ['final','attn_fft']:
+    analyze.final_attn_fft()
 elif sys.argv[1:] == ['train']:
     a_values = torch.arange(0, P)
     b_values = torch.arange(0, P)
@@ -33,7 +39,7 @@ elif sys.argv[1:] == ['train']:
     n_test = P * P - n_train
 
     model = SingleLayerTransformer().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=10)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=weight_decay)
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
 
     train_losses = np.zeros(n_epochs)
