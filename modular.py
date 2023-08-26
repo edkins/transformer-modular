@@ -3,6 +3,7 @@ import numpy as np
 import os
 import random
 import sys
+import time
 import torch
 
 from model import *
@@ -25,6 +26,10 @@ elif sys.argv[1:] == ['final','attn']:
     analyze.final_attn()
 elif sys.argv[1:] == ['final','attn_fft']:
     analyze.final_attn_fft()
+elif sys.argv[1:] == ['final', 'logits']:
+    analyze.final_logits()
+elif sys.argv[1:] == ['final', 'probs']:
+    analyze.final_probs()
 elif sys.argv[1:] == ['train']:
     a_values = torch.arange(0, P)
     b_values = torch.arange(0, P)
@@ -45,18 +50,20 @@ elif sys.argv[1:] == ['train']:
     train_losses = np.zeros(n_epochs)
     test_losses = np.zeros(n_epochs)
 
+    start_time = time.monotonic()
+
     try:
         for epoch in range(n_epochs):
             model.train()
             train_data_shuffled = train_data[torch.randperm(n_train)]
-            batch_size = 64
+            batch_size = 256
             loss_sum = torch.tensor(0.0).to(device)
             for i in range(0, n_train, batch_size):
                 optimizer.zero_grad()
                 batch = train_data_shuffled[i:i+batch_size]
                 logits = model(batch[:,:3])
                 loss = loss_fn(logits, batch[:,-1])
-                loss_sum += loss.sum()
+                loss_sum += loss.detach().sum()
                 loss.backward()
                 optimizer.step()
 
@@ -67,12 +74,13 @@ elif sys.argv[1:] == ['train']:
                 test_loss = loss_fn(test_logits, test_data[:,-1])
                 train_losses[epoch] = loss_sum.item() / n_train
                 test_losses[epoch] = test_loss.item() / n_test
-                print(f'epoch: {epoch:5d}   train loss: {loss_sum.item() / n_train:12.4f}   test loss: {test_loss.item() / n_test:12.4f}')
 
             if epoch % save_every == 0:
                 filename = f'models/model_{epoch:05d}.pt'
                 torch.save(model.state_dict(), filename)
-                print(f'saved model {filename}')
+                timing = time.monotonic() - start_time
+                print(f'epoch: {epoch:5d}   train loss: {loss_sum.item() / n_train:12.4f}   test loss: {test_loss.item() / n_test:12.4f}')
+                print(f'{timing:8.2f}: saved model {filename}')
     except KeyboardInterrupt:
         pass
 

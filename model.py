@@ -4,9 +4,9 @@ from torch.nn.functional import softmax, relu
 seed = 0
 P = 113
 n_train = (P * P * 3) // 10
-n_epochs = 2501
-save_every = 10
-weight_decay = 2
+n_epochs = 25001
+save_every = 50
+weight_decay = 0.3
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)

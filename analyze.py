@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import random
 from sklearn.decomposition import PCA
 import torch
 
@@ -19,13 +21,18 @@ def calc_attn(model, x):
     A = torch.softmax(torch.einsum('bhdt,bhd->bht', k, q), dim=2)
     return A
 
-def final_embed():
-    with torch.no_grad():
-        epoch = n_epochs - 1
-        state_dict = torch.load(f'models/model_{epoch:05d}.pt', map_location=device)
+def final_model():
+    with os.scandir('models') as entries:
+        filename = max(entry.path for entry in entries)
+        state_dict = torch.load(filename, map_location=device)
         model = SingleLayerTransformer().to(device)
         model.load_state_dict(state_dict)
         model.eval()
+        return model
+
+def final_embed():
+    with torch.no_grad():
+        model = final_model()
 
         embed = model.embed.cpu().numpy()[:P,:]
         pca = PCA(n_components=10)
@@ -36,28 +43,19 @@ def final_embed():
 
 def final_embed_fft():
     with torch.no_grad():
-        epoch = n_epochs - 1
-        state_dict = torch.load(f'models/model_{epoch:05d}.pt', map_location=device)
-        model = SingleLayerTransformer().to(device)
-        model.load_state_dict(state_dict)
-        model.eval()
+        model = final_model()
 
         embed = model.embed.cpu().numpy()[:P,:]
         fft = np.fft.fft(embed, axis=0)
-        fft_r = 0.5 + np.real(fft)
-        fft_g = 0.5 + np.imag(fft)
+        fft_r = 0.5 + np.real(fft) * 0.1
+        fft_g = 0.5 + np.imag(fft) * 0.1
         fft_rgb = np.stack((fft_r, fft_g, np.zeros_like(fft_r) + 0.5), axis=2)
         plt.imshow(np.abs(fft_rgb))
         plt.show()
 
 def final_attn():
     with torch.no_grad():
-        epoch = n_epochs - 1
-        state_dict = torch.load(f'models/model_{epoch:05d}.pt', map_location=device)
-        model = SingleLayerTransformer().to(device)
-        model.load_state_dict(state_dict)
-        model.eval()
-        print(model)
+        model = final_model()
 
         a_values = torch.arange(0, P)
         b_values = torch.arange(0, P)
@@ -83,12 +81,7 @@ def final_attn():
 
 def final_attn_fft():
     with torch.no_grad():
-        epoch = n_epochs - 1
-        state_dict = torch.load(f'models/model_{epoch:05d}.pt', map_location=device)
-        model = SingleLayerTransformer().to(device)
-        model.load_state_dict(state_dict)
-        model.eval()
-        print(model)
+        model = final_model()
 
         a_values = torch.arange(0, P)
         b_values = torch.arange(0, P)
@@ -104,3 +97,35 @@ def final_attn_fft():
                 fft = np.fft.fft2(A[:,:,i,j].cpu().numpy())
                 ax[i,j].imshow(np.abs(fft), vmax=1)
         plt.show()
+
+def final_logits():
+    with torch.no_grad():
+        model = final_model()
+
+        indices = (np.arange(P) * 1) % P
+
+        for i in range(3):
+            a = random.randrange(P)
+            b = random.randrange(P)
+            x = torch.tensor([[a,b,P]]).to(device)
+            logits = model(x)[0,:P].cpu()
+            plt.plot(logits.numpy()[indices], label = f'{a} + {b} = {(a + b) % P}')
+        plt.legend()
+        plt.show()
+
+def final_probs():
+    with torch.no_grad():
+        model = final_model()
+
+        indices = (np.arange(P) * 1) % P
+
+        for i in range(3):
+            a = random.randrange(P)
+            b = random.randrange(P)
+            x = torch.tensor([[a,b,P]]).to(device)
+            logits = model(x)[0,:P].cpu()
+            probs = torch.softmax(logits, dim=0).numpy()
+            plt.plot(probs[indices], label = f'{a} + {b} = {(a + b) % P}')
+        plt.legend()
+        plt.show()
+
