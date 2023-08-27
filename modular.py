@@ -44,7 +44,7 @@ elif sys.argv[1:] == ['train']:
     n_test = P * P - n_train
 
     model = SingleLayerTransformer().to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.003, weight_decay=weight_decay)
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
 
     train_losses = np.zeros(n_epochs // save_every)
@@ -78,7 +78,11 @@ elif sys.argv[1:] == ['train']:
                 filename = f'models/model_{epoch:05d}.pt'
                 torch.save(model.state_dict(), filename)
                 timing = time.monotonic() - start_time
-                print(f'{timing:8.2f}: epoch: {epoch:5d}   train loss: {avg_train_loss:15.7f}   test loss: {avg_test_loss:15.7f}')
+
+                train_accuracy = torch.sum(torch.argmax(logits, dim=1) == train_data[:,3]).item() / n_train
+                test_accuracy = torch.sum(torch.argmax(test_logits, dim=1) == test_data[:,3]).item() / n_test
+
+                print(f'{timing:8.2f}: epoch: {epoch:5d}   train loss: {avg_train_loss:15.7f}   test loss: {avg_test_loss:15.7f}.    train accuracy: {train_accuracy:7.5f}   test accuracy: {test_accuracy:7.5f}')
                 sum_train_losses = 0
                 sum_test_losses = 0
 
