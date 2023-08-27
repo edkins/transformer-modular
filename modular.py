@@ -44,7 +44,7 @@ elif sys.argv[1:] == ['train']:
     n_test = P * P - n_train
 
     model = SingleLayerTransformer().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=weight_decay)
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
 
     train_losses = np.zeros(n_epochs // save_every)
@@ -57,23 +57,17 @@ elif sys.argv[1:] == ['train']:
     try:
         for epoch in range(n_epochs):
             model.train()
-            train_data_shuffled = train_data[torch.randperm(n_train)]
-            batch_size = 256
-            loss_sum = torch.tensor(0.0).to(device)
-            for i in range(0, n_train, batch_size):
-                optimizer.zero_grad()
-                batch = train_data_shuffled[i:i+batch_size]
-                logits = model(batch[:,:3])
-                loss = loss_fn(logits, batch[:,-1])
-                loss_sum += loss.detach().sum()
-                loss.backward()
-                optimizer.step()
-            sum_train_losses += loss_sum.item() / n_train
+            optimizer.zero_grad()
+            logits = model(train_data[:,:3])
+            loss = loss_fn(logits, train_data[:,3])
+            loss.backward()
+            optimizer.step()
+            sum_train_losses += loss.item() / n_train
 
             model.eval()
             with torch.no_grad():
                 test_logits = model(test_data[:,:3])
-                test_loss = loss_fn(test_logits, test_data[:,-1]).item()
+                test_loss = loss_fn(test_logits, test_data[:,3]).item()
                 sum_test_losses += test_loss / n_test
 
             if epoch % save_every == save_every - 1:
@@ -84,7 +78,7 @@ elif sys.argv[1:] == ['train']:
                 filename = f'models/model_{epoch:05d}.pt'
                 torch.save(model.state_dict(), filename)
                 timing = time.monotonic() - start_time
-                print(f'{timing:8.2f}: epoch: {epoch:5d}   train loss: {avg_train_loss:12.4f}   test loss: {avg_test_loss:12.4f}')
+                print(f'{timing:8.2f}: epoch: {epoch:5d}   train loss: {avg_train_loss:15.7f}   test loss: {avg_test_loss:15.7f}')
                 sum_train_losses = 0
                 sum_test_losses = 0
 
