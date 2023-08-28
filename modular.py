@@ -44,7 +44,7 @@ elif sys.argv[1:] == ['train']:
     n_test = P * P - n_train
 
     model = SingleLayerTransformer().to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.003, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.002, weight_decay=weight_decay)
     loss_fn = torch.nn.CrossEntropyLoss(reduction='sum')
 
     train_losses = np.zeros(n_epochs // save_every)
